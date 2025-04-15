@@ -2,11 +2,53 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
+import { sendPasswordResetEmail } from '../lib/sendEmail';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
-export const register = async (req: Request, res: Response) => {
-  const { email, password, name, role } = req.body;
+interface RegisterRequestBody {
+  email: string;
+  password: string;
+  name?: string;
+  role?: 'LEARNER' | 'EDUCATOR' | 'ADMIN';
+  profileImage?: string;
+  bio?: string;
+  occupation?: string;
+  organization?: string;
+  phone?: string;
+}
+
+interface LoginRequestBody {
+  email: string;
+  password: string;
+}
+
+interface VerifyOtpAndResetPasswordRequestBody {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+interface RequestPasswordResetRequestBody {
+  email: string;
+}
+
+interface RequestPasswordResetResponseBody {
+  message: string;
+}
+
+export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: Response) => {
+  const {
+    email,
+    password,
+    name = '',
+    role = 'LEARNER',
+    profileImage,
+    bio,
+    occupation,
+    organization,
+    phone,
+  } = req.body;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -18,8 +60,13 @@ export const register = async (req: Request, res: Response) => {
       data: {
         email,
         name,
-        role,
+        role: role.toUpperCase() as 'LEARNER' | 'EDUCATOR' | 'ADMIN',
         password: hashedPassword,
+        profileImage,
+        bio,
+        occupation,
+        organization,
+        phone,
       },
     });
 
@@ -27,14 +74,27 @@ export const register = async (req: Request, res: Response) => {
       expiresIn: '7d',
     });
 
-    res.status(201).json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        profileImage: user.profileImage,
+        bio: user.bio,
+        occupation: user.occupation,
+        organization: user.organization,
+        phone: user.phone,
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Registration failed' });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
   const { email, password } = req.body;
 
   try {
@@ -47,9 +107,107 @@ export const login = async (req: Request, res: Response) => {
       expiresIn: '7d',
     });
 
-    res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,  
+        name: user.name,
+        profileImage: user.profileImage,
+        bio: user.bio,
+        occupation: user.occupation,
+        organization: user.organization,
+        phone: user.phone,
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Login failed' });
   }
+};
+
+export const requestPasswordReset = async (
+  req: Request<{}, {}, { email: string }>,
+  res: Response<{ message: string }>) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    await prisma.passwordReset.deleteMany({ where: { email } });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+    await prisma.passwordReset.create({
+      data: { email, otp, expiresAt },
+    });
+
+    await sendPasswordResetEmail({ to: email, otp });
+
+    return res.json({ message: 'OTP sent to your email' });
+};
+
+export const verifyOtpAndResetPassword = async (
+  req: Request<{}, {}, { email: string; otp: string; newPassword: string }>,
+  res: Response<{ message: string }>) => {
+    const { email, otp, newPassword } = req.body;
+
+    const resetRecord = await prisma.passwordReset.findFirst({
+      where: { email, otp },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!resetRecord || resetRecord.expiresAt < new Date()) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+
+    await prisma.passwordReset.deleteMany({ where: { email } });
+
+    return res.json({ message: 'Password reset successful' });
+};
+
+export const resendOtp = async (
+  req: Request<{}, {}, { email: string }>,
+  res: Response<{ message: string }>) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const existingOtp = await prisma.passwordReset.findFirst({
+      where: { email },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const now = new Date();
+
+    if (existingOtp && existingOtp.expiresAt > now) {
+      
+      await sendPasswordResetEmail({ to: email, otp: existingOtp.otp });
+      return res.json({ message: 'OTP resent to your email' });
+    }
+
+    
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); 
+
+
+    await prisma.passwordReset.deleteMany({ where: { email } });
+
+    await prisma.passwordReset.create({
+      data: { email, otp: newOtp, expiresAt },
+    });
+
+    await sendPasswordResetEmail({ to: email, otp: newOtp });
+
+    return res.json({ message: 'New OTP sent to your email' });
 };

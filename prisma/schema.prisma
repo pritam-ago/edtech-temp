@@ -4,20 +4,24 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:Dhanus%2317@localhost:5432/AM-EdTech"
+  url      = env("DATABASE_URL")
 }
-
 
 model User {
   id            String        @id @default(uuid())
   email         String        @unique
   password      String
-  name          String?
-  role          Role          @default(USER)
+  name          String
+  profileImage  String?
+  bio           String?
+  occupation    String?
+  organization  String?
+  phone         String?
+  role          Role          @default(LEARNER)
   walletAddress String?
   enrollments   Enrollment[]
   certificates  Certificate[]
-  courses       Course[] // Added this relation field
+  courses       Course[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -25,8 +29,8 @@ model User {
 }
 
 enum Role {
-  USER
-  CREATOR
+  LEARNER
+  EDUCATOR
   ADMIN
 }
 
@@ -67,6 +71,7 @@ model Lesson {
   content   String
   duration  Int?
   order     Int
+  videoUrl  String?
   sectionId String
   section   Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   progress  Progress[]
@@ -115,4 +120,12 @@ model Certificate {
   issuedAt   DateTime @default(now())
 
   @@map("certificates")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
