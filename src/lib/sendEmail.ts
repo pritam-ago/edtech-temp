@@ -5,6 +5,11 @@ interface SendPasswordResetEmailOptions {
   otp: string;
 }
 
+interface sendEmailUpdateOptions {
+  to: string;
+  otp: string;
+}
+
 export async function sendPasswordResetEmail({ to, otp }: SendPasswordResetEmailOptions): Promise<void> {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -32,3 +37,4 @@ export async function sendPasswordResetEmail({ to, otp }: SendPasswordResetEmail
     throw new Error('Failed to send password reset email');
   }
 }
+

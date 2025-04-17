@@ -128,7 +128,7 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
 };
 
 export const requestPasswordReset = async (
-  req: Request<{}, {}, { email: string }>,
+  req: Request<{}, {}, RequestPasswordResetRequestBody>,
   res: Response<{ message: string }>) => {
     const { email } = req.body;
 
@@ -150,7 +150,7 @@ export const requestPasswordReset = async (
 };
 
 export const verifyOtpAndResetPassword = async (
-  req: Request<{}, {}, { email: string; otp: string; newPassword: string }>,
+  req: Request<{}, {}, VerifyOtpAndResetPasswordRequestBody>,
   res: Response<{ message: string }>) => {
     const { email, otp, newPassword } = req.body;
 
@@ -176,8 +176,8 @@ export const verifyOtpAndResetPassword = async (
 };
 
 export const resendOtp = async (
-  req: Request<{}, {}, { email: string }>,
-  res: Response<{ message: string }>) => {
+  req: Request<{}, {}, RequestPasswordResetRequestBody>,
+  res: Response<RequestPasswordResetResponseBody>) => {
     const { email } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });

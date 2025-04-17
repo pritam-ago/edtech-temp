@@ -82,19 +82,20 @@ model Lesson {
 }
 
 model Enrollment {
-  id            String     @id @default(uuid())
-  userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId      String
-  course        Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  enrolledAt    DateTime   @default(now())
-  completedAt   DateTime?
-  certificateId String?
-  progress      Progress[]
+  id          String     @id @default(uuid())
+  learnerId   String
+  courseId    String
+  enrolledAt  DateTime   @default(now())
+  completedAt DateTime?
+  progress    Progress[]
 
-  @@unique([userId, courseId])
+  learner     User       @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, courseId])
   @@map("enrollments")
 }
+
 
 model Progress {
   id           String     @id @default(uuid())

@@ -1,0 +1,113 @@
+import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import prisma from "../lib/prisma";
+
+export const getUserData = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+  }
+  const userId = req.user.id;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        profileImage: true,
+        bio: true,
+        occupation: true,
+        organization: true,
+        phone: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const updateUserData = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+  }
+  const userId = req.user.id;
+
+    const { name, bio, occupation, organization, phone, walletAddress } = req.body;
+    const data: { name?: string; bio?: string; occupation?: string; organization?: string; phone?: string; walletAddress?: string } = {};
+    if (name) data.name = name;
+    if (bio) data.bio = bio;
+    if (occupation) data.occupation = occupation;
+    if (organization) data.organization = organization;
+    if (phone) data.phone = phone;
+    if (walletAddress) data.walletAddress = walletAddress;
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: data
+    });
+
+    return res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error("Error updating user data:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const changePassword = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+  }
+  const userId = req.user.id;
+
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+  }
+  const userId = req.user.id;
+
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
