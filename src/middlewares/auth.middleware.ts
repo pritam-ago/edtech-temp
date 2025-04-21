@@ -6,8 +6,10 @@ interface AuthenticatedRequest extends Request {
   user?: any;
 }
 
+const ENV_URI = process.env.ENV_URI;
+
 const client = jwksClient({
-  jwksUri: 'https://app.dynamic.xyz/api/v0/sdk/122f8d7f-3392-4563-8a04-98a64026b7fe/.well-known/jwks',
+  jwksUri: `https://app.dynamic.xyz/api/v0/sdk/${ENV_URI}/.well-known/jwks`,
 });
 
 const getKey = (header: JwtHeader, callback: SigningKeyCallback) => {
@@ -34,7 +36,7 @@ export const verifyDynamicJwt = (
     getKey,
     {
       audience: 'http://localhost:5173',
-      issuer: 'app.dynamicauth.com/122f8d7f-3392-4563-8a04-98a64026b7fe',
+      issuer: `app.dynamicauth.com/${ENV_URI}`,
     },
     (err, decoded) => {
       if (err) {
