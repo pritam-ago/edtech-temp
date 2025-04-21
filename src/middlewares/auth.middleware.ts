@@ -1,47 +1,49 @@
-import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { Role } from '@prisma/client';
-import prisma from '../lib/prisma';
+import jwt, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        role: Role;
-      };
-    }
-  }
+interface AuthenticatedRequest extends Request {
+  user?: any;
 }
 
-interface DecodedToken extends JwtPayload {
-  userId: string;
-}
+const client = jwksClient({
+  jwksUri: 'https://app.dynamic.xyz/api/v0/sdk/122f8d7f-3392-4563-8a04-98a64026b7fe/.well-known/jwks',
+});
 
-export const verifyToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const token = req.headers['authorization']?.split(' ')[1];
+const getKey = (header: JwtHeader, callback: SigningKeyCallback) => {
+  client.getSigningKey(header.kid!, (err, key) => {
+    const signingKey = key?.getPublicKey();
+    callback(err, signingKey);
+  });
+};
 
-  if (!token) {
-    res.status(403).json({ message: 'Token is missing' });
-    return;
+export const verifyDynamicJwt = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
+  const token = authHeader.split(' ')[1];
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true, role: true },
-    });
+  jwt.verify(
+    token,
+    getKey,
+    {
+      audience: 'http://localhost:5173',
+      issuer: 'app.dynamicauth.com/122f8d7f-3392-4563-8a04-98a64026b7fe',
+    },
+    (err, decoded) => {
+      if (err) {
+        console.error('JWT verification failed:', err);
+        return res.status(403).json({ error: 'Invalid or expired token' });
+      }
 
-    if (!user) {
-      res.status(401).json({ message: 'User not found' });
-      return;
+      req.user = decoded;
+      next();
     }
-
-    req.user = { id: user.id, role: user.role };
-    next();
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid or expired token' });
-  }
+  );
 };

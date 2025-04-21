@@ -1,6 +1,7 @@
 import e, { Request, Response } from "express";
 import prisma from "../lib/prisma";
 
+
 export const createCourse = async (req: Request, res: Response) => {
   const { title, description, price, coverImage } = req.body;
   const creatorId = req.user?.id as string;

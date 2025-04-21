@@ -5,12 +5,12 @@ import {
   getEnrollmentByCourse,
   unenrollFromCourse,
 } from "../controllers/enrollment.controller";
-import { verifyToken } from "../middlewares/auth.middleware";
+import { verifyDynamicJwt } from "../middlewares/auth.middleware";
 import { requireRole } from "../middlewares/role.middleware";
 
 const router = Router();
 
-router.use(verifyToken);
+router.use(verifyDynamicJwt);
 router.use(requireRole("LEARNER"));
 
 router.post("/", enrollInCourse);//

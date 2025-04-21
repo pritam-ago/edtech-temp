@@ -10,7 +10,9 @@ export const requireRole = (...allowedRoles: Role[]) => {
       return;
     }
 
-    if (!allowedRoles.includes(user.role)) {
+    const userRole = user.DynamicUser?.role;
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
       res.status(403).json({ message: 'Access denied: insufficient role' });
       return;
     }

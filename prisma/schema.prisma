@@ -10,10 +10,7 @@ datasource db {
 model User {
   id            String        @id @default(uuid())
   email         String        @unique
-  password      String
   name          String
-  profileImage  String?
-  bio           String?
   occupation    String?
   organization  String?
   phone         String?
@@ -96,7 +93,6 @@ model Enrollment {
   @@map("enrollments")
 }
 
-
 model Progress {
   id           String     @id @default(uuid())
   enrollmentId String
@@ -121,12 +117,4 @@ model Certificate {
   issuedAt   DateTime @default(now())
 
   @@map("certificates")
-}
-
-model PasswordReset {
-  id        String   @id @default(uuid())
-  email     String
-  otp       String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
 }
