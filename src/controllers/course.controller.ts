@@ -1,23 +1,57 @@
 import e, { Request, Response } from "express";
 import prisma from "../lib/prisma";
 
-
 export const createCourse = async (req: Request, res: Response) => {
   const { title, description, price, coverImage } = req.body;
-  const creatorId = req.user?.id as string;
+  const creatorId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
 
   try {
     const course = await prisma.course.create({
-      data: { title, description, price, coverImage, creatorId },
+      data: { title, description, price, coverImage, creatorId: creatorId as string },
     });
     res.status(201).json(course);
   } catch (err) {
+    console.log("Error creating course:", err);
     res.status(500).json({ message: "Error creating course" });
   }
 };
 
+export const publishCourse = async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  try {
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: { isPublished: true },
+    });
+    res.json(course);
+  } catch (err) {
+    res.status(500).json({ message: "Error publishing course" });
+  }
+}
+
+export const unpublishCourse = async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  try {
+    const course = await prisma.course.update({
+      where: { id: courseId },
+      data: { isPublished: false },
+    });
+    res.json(course);
+  } catch (err) {
+    res.status(500).json({ message: "Error unpublishing course" });
+  }
+};
+
+
+
 export const getEducatorCourses = async (req: Request, res: Response) => {
-  const creatorId = req.user?.id as string;
+  const creatorId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
 
   const courses = await prisma.course.findMany({
     where: { creatorId },

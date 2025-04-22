@@ -11,6 +11,8 @@ router.get('/', verifyDynamicJwt, CourseController.getAllCourses);//
 router.get('/:courseId', verifyDynamicJwt, CourseController.getCourseById);//
 router.patch('/:courseId', verifyDynamicJwt, requireRole(Role.EDUCATOR), CourseController.updateCourse);//
 router.delete('/:courseId', verifyDynamicJwt, requireRole(Role.EDUCATOR, Role.ADMIN), CourseController.deleteCourse);
+router.patch('/:courseId/publish', verifyDynamicJwt, requireRole(Role.EDUCATOR), CourseController.publishCourse);
+router.patch('/:courseId/unpublish', verifyDynamicJwt, requireRole(Role.EDUCATOR), CourseController.unpublishCourse);
 
 router.get('/:courseId/sections', verifyDynamicJwt, CourseController.getSections);//
 router.post('/:courseId/sections', verifyDynamicJwt, requireRole(Role.EDUCATOR), CourseController.addSection);//

@@ -2,12 +2,15 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 
 export const enrollInCourse = async (req: Request, res: Response) => {
-  const learnerId = req.user?.id as string;
+  const learnerId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
   const { courseId } = req.body;
 
   try {
     const alreadyEnrolled = await prisma.enrollment.findUnique({
-      where: { learnerId_courseId: { learnerId, courseId } },
+      where: { learnerId_courseId: { learnerId: learnerId as string, courseId } },
     });
 
     if (alreadyEnrolled) {
@@ -15,7 +18,7 @@ export const enrollInCourse = async (req: Request, res: Response) => {
     }
 
     const enrollment = await prisma.enrollment.create({
-      data: { learnerId, courseId },
+      data: { learnerId: learnerId as string, courseId },
     });
 
     res.status(201).json(enrollment);
@@ -25,7 +28,10 @@ export const enrollInCourse = async (req: Request, res: Response) => {
 };
 
 export const getMyEnrollments = async (req: Request, res: Response) => {
-  const learnerId = req.user?.id;
+  const learnerId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
   if (!learnerId) {
     return res.status(400).json({ message: "Learner ID is required" });
   }
@@ -47,7 +53,10 @@ export const getMyEnrollments = async (req: Request, res: Response) => {
 };
 
 export const getEnrollmentByCourse = async (req: Request, res: Response) => {
-  const learnerId = req.user?.id;
+  const learnerId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
   const { courseId } = req.params;
 
   if (!learnerId) {
@@ -67,7 +76,10 @@ export const getEnrollmentByCourse = async (req: Request, res: Response) => {
 };
 
 export const unenrollFromCourse = async (req: Request, res: Response) => {
-  const learnerId = req.user?.id;
+  const learnerId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
   const { courseId } = req.params;
 
   if (!learnerId) {

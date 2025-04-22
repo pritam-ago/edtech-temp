@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 
 export const getUserData = async (req: Request, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: "Unauthorized: User not authenticated" });
   }
-  const userId = req.user.id;
+  const userId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
 
   try {
     const user = await prisma.user.findUnique({
@@ -38,12 +39,14 @@ export const updateUserData = async (req: Request, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: "Unauthorized: User not authenticated" });
   }
-  const userId = req.user.id;
+  const userId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
 
-    const { name, bio, occupation, organization, phone, walletAddress } = req.body;
-    const data: { name?: string; bio?: string; occupation?: string; organization?: string; phone?: string; walletAddress?: string } = {};
+    const { name, occupation, organization, phone, walletAddress } = req.body;
+    const data: { name?: string; occupation?: string; organization?: string; phone?: string; walletAddress?: string } = {};
     if (name) data.name = name;
-    if (bio) data.bio = bio;
     if (occupation) data.occupation = occupation;
     if (organization) data.organization = organization;
     if (phone) data.phone = phone;
@@ -66,7 +69,10 @@ export const deleteAccount = async (req: Request, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: "Unauthorized: User not authenticated" });
   }
-  const userId = req.user.id;
+  const userId = await prisma.user.findUnique({
+    where: { email: req.user?.email as string },
+    select: { id: true },
+  }).then(user => user?.id);
 
   try {
     await prisma.user.delete({ where: { id: userId } });

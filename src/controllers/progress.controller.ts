@@ -5,12 +5,15 @@ export const getProgressByCourse = async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-    const learnerId = req.user.id;
+    const learnerId = await prisma.user.findUnique({
+      where: { email: req.user?.email as string },
+      select: { id: true },
+    }).then(user => user?.id);
     const { courseId } = req.params;
   
     try {
       const enrollment = await prisma.enrollment.findUnique({
-        where: { learnerId_courseId: { learnerId, courseId } },
+        where: { learnerId_courseId: { learnerId: learnerId as string, courseId } },
         include: {
           progress: true,
           course: {
@@ -68,7 +71,10 @@ export const getProgressByCourse = async (req: Request, res: Response) => {
   
 
 export const updateProgressByLesson = async (req: Request, res: Response) => {
-    const learnerId = req.user?.id;
+    const learnerId = await prisma.user.findUnique({
+      where: { email: req.user?.email as string },
+      select: { id: true },
+    }).then(user => user?.id);
     const { courseId, lessonId } = req.params;
     const { completed } = req.body;
   

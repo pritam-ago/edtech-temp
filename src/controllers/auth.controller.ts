@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import '../types/express';
 import prisma from '../lib/prisma';
 import { DynamicUser } from '../types/dynamic';
 

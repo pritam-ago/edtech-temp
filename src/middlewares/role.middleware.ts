@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 export const requireRole = (...allowedRoles: Role[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const user = req.user;
 
     if (!user) {
@@ -10,10 +11,14 @@ export const requireRole = (...allowedRoles: Role[]) => {
       return;
     }
 
-    const userRole = user.DynamicUser?.role;
+    const userRole = await prisma.user.findUnique({
+      where: { email: user.email },
+      select: { role: true },
+    }).then(user => user?.role);
 
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    if (!userRole || !allowedRoles.includes(userRole as Role)) {
       res.status(403).json({ message: 'Access denied: insufficient role' });
+      console.log(user)
       return;
     }
 
