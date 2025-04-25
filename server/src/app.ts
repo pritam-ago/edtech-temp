@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('Welcome to the Learning Management System API!');   
+  res.send('System API! Im running great man!');   
 });
 
 app.use('/api/auth', authRoutes);
