@@ -81,9 +81,7 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
 export const verifyLogin = async (req: Request, res: Response) => {
   const user = req.user as DynamicUser | undefined;
   console.log('User from middleware:', user);
-  if (user?.new_user) {
-    return res.status(403).json({ message: 'Unauthorized', new_user: true });
-  }
+
   const dynamicUser = user as DynamicUser;
   const { email, verified_credentials } = dynamicUser;
   const walletAddress = verified_credentials.find(vc => vc.format === 'blockchain')?.address || null;
@@ -92,10 +90,12 @@ export const verifyLogin = async (req: Request, res: Response) => {
     const existing = await prisma.user.findUnique({ where: { email } });
 
     if (!existing) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.status(200).json({
+      return res.status(200).json({
+        isRegistered: false,
+        message: 'User is not registered',
+      });
+    }else{
+      res.status(200).json({
       user: {
         id: existing.id,
         email: existing.email,
@@ -106,8 +106,11 @@ export const verifyLogin = async (req: Request, res: Response) => {
         phone: existing.phone,
         walletAddress,
       },
-      new_user: false,
-    });
+      isRegistered: true,
+      });
+    }
+
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Login failed' });
