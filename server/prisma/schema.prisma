@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String
+  occupation    String?
+  organization  String?
+  phone         String?
+  role          Role          @default(LEARNER)
+  walletAddress String?
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  courses       Course[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  LEARNER
+  EDUCATOR
+  ADMIN
+}
+
+model Course {
+  id           String        @id @default(uuid())
+  title        String
+  description  String
+  price        Decimal
+  coverImage   String?
+  creatorId    String
+  creator      User          @relation(fields: [creatorId], references: [id])
+  enrollments  Enrollment[]
+  sections     Section[]
+  certificates Certificate[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  isPublished  Boolean       @default(false)
+
+  @@map("courses")
+}
+
+model Section {
+  id        String   @id @default(uuid())
+  title     String
+  order     Int
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sections")
+}
+
+model Lesson {
+  id        String     @id @default(uuid())
+  title     String
+  content   String
+  duration  Int?
+  order     Int
+  videoUrl  String?
+  sectionId String
+  section   Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  progress  Progress[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id          String     @id @default(uuid())
+  learnerId   String
+  courseId    String
+  enrolledAt  DateTime   @default(now())
+  completedAt DateTime?
+  progress    Progress[]
+
+  learner     User       @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, courseId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id           String     @id @default(uuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lessonId     String
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed    Boolean    @default(false)
+  lastAccessed DateTime   @default(now())
+
+  @@unique([enrollmentId, lessonId])
+  @@map("progress")
+}
+
+model Certificate {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+  nftTokenId String   @unique
+  txHash     String
+  issuedAt   DateTime @default(now())
+
+  @@map("certificates")
+}
