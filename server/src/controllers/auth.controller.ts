@@ -24,11 +24,10 @@ interface VerifiedCredential {
 export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: Response) => {
   const user = req.user as DynamicUser | undefined;
   console.log('User from middleware:', user);
-  if (!user || !user.new_user) {
-    return res.status(403).json({ message: 'Unauthorized or user already registered' });
-  }
 
-  const { email, verified_credentials } = user;
+  const dynamicUser = user as DynamicUser;
+  const { email, verified_credentials } = dynamicUser;
+  const walletAddress = verified_credentials.find(vc => vc.format === 'blockchain')?.address || null;
   const {
     name = '',
     role = 'LEARNER',
@@ -36,8 +35,6 @@ export const register = async (req: Request<{}, {}, RegisterRequestBody>, res: R
     organization,
     phone,
   } = req.body;
-
-  const walletAddress = verified_credentials.find(vc => vc.format === 'blockchain')?.address || null;
 
   try {
     const existing = await prisma.user.findUnique({ where: { email } });
