@@ -78,6 +78,7 @@ model Lesson {
   @@map("lessons")
 }
 
+
 model Enrollment {
   id          String     @id @default(uuid())
   learnerId   String
