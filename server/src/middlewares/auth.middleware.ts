@@ -35,7 +35,7 @@ export const verifyDynamicJwt = (
     token,
     getKey,
     {
-      audience: 'http://localhost:5173',
+      audience: 'http://localhost:3000',
       issuer: `app.dynamicauth.com/${ENV_URI}`,
     },
     (err, decoded) => {
